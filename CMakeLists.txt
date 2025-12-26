@@ -73,6 +73,10 @@ endif()
 # Need to set PIC to allow creating shared libraries from object file libraries.
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# Options to control build type
+option(ENABLE_SHARED "Build shared libraries" OFF)
+option(ENABLE_STATIC "Build static libraries" ON)
+
 # Build the set of objects that do not need to be compiled with flags to enable
 # particular architecture features.
 add_library( ${ly_lib_name}_common_objects OBJECT ${ly_common_source_files} )
@@ -169,15 +173,19 @@ if(LOONGARCH64)
   endif()
 endif()
 
-# this creates the static library (.a)
-add_library( ${ly_lib_static} STATIC ${ly_lib_parts})
+# Conditionally create static library
+if(ENABLE_STATIC)
+  add_library( ${ly_lib_static} STATIC ${ly_lib_parts})
+endif()
 
-# this creates the shared library (.so)
-add_library( ${ly_lib_shared} SHARED ${ly_lib_parts})
-set_target_properties( ${ly_lib_shared} PROPERTIES OUTPUT_NAME "${ly_lib_name}" )
-set_target_properties( ${ly_lib_shared} PROPERTIES PREFIX "lib" )
-if(WIN32)
-  set_target_properties( ${ly_lib_shared} PROPERTIES IMPORT_PREFIX "lib" )
+# Conditionally create shared library
+if(ENABLE_SHARED)
+  add_library( ${ly_lib_shared} SHARED ${ly_lib_parts})
+  set_target_properties( ${ly_lib_shared} PROPERTIES OUTPUT_NAME "${ly_lib_name}" )
+  set_target_properties( ${ly_lib_shared} PROPERTIES PREFIX "lib" )
+  if(WIN32)
+    set_target_properties( ${ly_lib_shared} PROPERTIES IMPORT_PREFIX "lib" )
+  endif()
 endif()
 
 # this creates the cpuid tool
@@ -195,7 +203,9 @@ target_link_libraries  ( yuvconstants ${ly_lib_static} )
 find_package ( JPEG )
 if (JPEG_FOUND)
   include_directories( ${JPEG_INCLUDE_DIR} )
-  target_link_libraries( ${ly_lib_shared} ${JPEG_LIBRARY} )
+  if(ENABLE_SHARED)
+    target_link_libraries( ${ly_lib_shared} ${JPEG_LIBRARY} )
+  endif()
   add_definitions( -DHAVE_JPEG )
 endif()
 
@@ -243,8 +253,16 @@ endif()
 
 # install the conversion tool, .so, .a, and all the header files
 install ( TARGETS yuvconvert DESTINATION bin )
-install ( TARGETS ${ly_lib_static}						DESTINATION lib )
-install ( TARGETS ${ly_lib_shared} LIBRARY DESTINATION lib RUNTIME DESTINATION bin ARCHIVE DESTINATION lib )
+
+# Conditionally install static and shared libraries
+if(ENABLE_STATIC AND ENABLE_SHARED)
+  install ( TARGETS ${ly_lib_static} ${ly_lib_shared} LIBRARY DESTINATION lib RUNTIME DESTINATION bin ARCHIVE DESTINATION lib )
+elseif(ENABLE_STATIC)
+  install ( TARGETS ${ly_lib_static} DESTINATION lib )
+elseif(ENABLE_SHARED)
+  install ( TARGETS ${ly_lib_shared} LIBRARY DESTINATION lib RUNTIME DESTINATION bin ARCHIVE DESTINATION lib )
+endif()
+
 install ( DIRECTORY ${PROJECT_SOURCE_DIR}/include/		DESTINATION include )
 
 # create the .deb and .rpm packages using cpack
