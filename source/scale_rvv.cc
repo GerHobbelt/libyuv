@@ -18,6 +18,13 @@
 #include "libyuv/row.h"
 #include "libyuv/scale_row.h"
 
+// Note: every register written by an inline asm block (vector, general
+// purpose, mask/predicate, "cc" for flags and "memory" for stores) must be
+// listed in its clobber list, even when the ABI treats it as caller-saved.
+// With LTO/LTCG the compiler may keep values live in any register across the
+// asm statement, and other OS ABIs (e.g. Windows) differ in which registers
+// are callee-saved. List "memory" first, then "cc", then registers.
+
 // This module is for RVV (RISC-V Vector extension)
 #if !defined(LIBYUV_DISABLE_RVV) && defined(__riscv_vector)
 #include <assert.h>
@@ -26,6 +33,11 @@ namespace libyuv {
 extern "C" {
 #endif
 
+// vsetvli/vsetivli write the vl and vtype CSRs. Only "vl" is declared, and
+// only for GCC; clang historically rejected it. The "vtype" register is
+// intentionally not declared, and whether it should be is unresolved.
+// TODO(fbarchard): consider adding "vtype" (and "vl" for clang) to the
+// clobber list once confirmed with compiler maintainers.
 #ifndef RVV_VL_CLOBBER
 #ifdef __clang__
 #define RVV_VL_CLOBBER

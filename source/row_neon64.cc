@@ -20,6 +20,13 @@ extern "C" {
 // STn over ZIP1+ST1
 // Exynos M1, M2, M3 are slow with ST2, ST3 and ST4 instructions.
 
+// Note: every register written by an inline asm block (vector, general
+// purpose, mask/predicate, "cc" for flags and "memory" for stores) must be
+// listed in its clobber list, even when the ABI treats it as caller-saved.
+// With LTO/LTCG the compiler may keep values live in any register across the
+// asm statement, and other OS ABIs (e.g. Windows) differ in which registers
+// are callee-saved. List "memory" first, then "cc", then registers.
+
 // This module is for GCC Neon armv8 64 bit.
 #if !defined(LIBYUV_DISABLE_NEON) && defined(__aarch64__)
 
@@ -2148,7 +2155,7 @@ void ARGB1555ToARGBRow_NEON(const uint8_t* src_argb1555,
         "+r"(dst_argb),      // %1
         "+r"(width)          // %2
       :
-      : "cc", "memory", "v0", "v1", "v2", "v3", "v29"  // Clobber List
+      : "memory", "cc", "v0", "v1", "v2", "v3", "v4", "v29"  // Clobber List
   );
 }
 
@@ -3489,7 +3496,8 @@ void ARGB4444ToYRow_NEON(const uint8_t* src_argb4444,
         "+r"(dst_y),         // %1
         "+r"(width)          // %2
       :
-      : "cc", "memory", "v0", "v1", "v2", "v3", "v24", "v25", "v26", "v27");
+      : "memory", "cc", "v0", "v1", "v2", "v3", "v16", "v17", "v24", "v25",
+        "v26", "v27");
 }
 
 // ARGB expects first 3 values to contain RGB and 4th value is ignored.

@@ -16,6 +16,13 @@ namespace libyuv {
 extern "C" {
 #endif
 
+// Note: every register written by an inline asm block (vector, general
+// purpose, mask/predicate, "cc" for flags and "memory" for stores) must be
+// listed in its clobber list, even when the ABI treats it as caller-saved.
+// With LTO/LTCG the compiler may keep values live in any register across the
+// asm statement, and other OS ABIs (e.g. Windows) differ in which registers
+// are callee-saved. List "memory" first, then "cc", then registers.
+
 // This module is for GCC Neon
 #if !defined(LIBYUV_DISABLE_NEON) && defined(__ARM_NEON__) && \
     !defined(__aarch64__)
@@ -1670,8 +1677,8 @@ void YUY2ToNVUVRow_NEON(const uint8_t* src_yuy2,
         "+r"(dst_uv),       // %2
         "+r"(width)         // %3
       :
-      : "cc", "memory", "d0", "d1", "d2", "d3", "d4", "d5", "d6",
-        "d7"  // Clobber List
+      : "memory", "cc", "d0", "d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8",
+        "d9"  // Clobber List
   );
 }
 
@@ -2981,8 +2988,8 @@ void ARGBSepiaRow_NEON(uint8_t* dst_argb, int width) {
       : "+r"(dst_argb),  // %0
         "+r"(width)      // %1
       :
-      : "cc", "memory", "q0", "q1", "q2", "q3", "q10", "q11", "q12", "q13",
-        "q14", "q15");
+      : "memory", "cc", "q0", "q1", "q2", "q3", "q8", "q10", "q11", "q12",
+        "q13", "q14", "q15");
 }
 
 // Tranform 8 ARGB pixels (32 bytes) with color matrix.

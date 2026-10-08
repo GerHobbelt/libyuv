@@ -16,6 +16,13 @@ namespace libyuv {
 extern "C" {
 #endif
 
+// Note: every register written by an inline asm block (vector, general
+// purpose, mask/predicate, "cc" for flags and "memory" for stores) must be
+// listed in its clobber list, even when the ABI treats it as caller-saved.
+// With LTO/LTCG the compiler may keep values live in any register across the
+// asm statement, and other OS ABIs (e.g. Windows) differ in which registers
+// are callee-saved. List "memory" first, then "cc", then registers.
+
 // This module is for GCC x86 and x64.
 #if !defined(LIBYUV_DISABLE_X86) &&               \
     (defined(__x86_64__) || defined(__i386__)) && \
@@ -2763,7 +2770,7 @@ void ScaleARGBRowDown2Linear_SSE2(const uint8_t* src_argb,
         "+r"(dst_argb),  // %1
         "+r"(dst_width)  // %2
       :
-      : "memory", "cc", "xmm0", "xmm1");
+      : "memory", "cc", "xmm0", "xmm1", "xmm2");
 }
 
 void ScaleARGBRowDown2Box_SSE2(const uint8_t* src_argb,

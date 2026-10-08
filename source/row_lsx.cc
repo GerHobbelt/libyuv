@@ -12,6 +12,13 @@
 
 #include "libyuv/row.h"
 
+// Note: every register written by an inline asm block (vector, general
+// purpose, mask/predicate, "cc" for flags and "memory" for stores) must be
+// listed in its clobber list, even when the ABI treats it as caller-saved.
+// With LTO/LTCG the compiler may keep values live in any register across the
+// asm statement, and other OS ABIs (e.g. Windows) differ in which registers
+// are callee-saved. List "memory" first, then "cc", then registers.
+
 #if !defined(LIBYUV_DISABLE_LSX) && defined(__loongarch_sx)
 #include "libyuv/loongson_intrinsics.h"
 
@@ -2637,7 +2644,8 @@ void ARGBToYMatrixRow_LSX(const uint8_t* src_argb,
         "+&r"(dst_y),     // %1
         "+&r"(width)      // %2
       : "r"(c)
-      : "memory");
+      : "memory", "$vr0", "$vr1", "$vr2", "$vr3", "$vr4", "$vr5", "$vr6",
+        "$vr7", "$vr8", "$vr9", "$vr10", "$vr11", "$vr12", "$vr13", "$vr20");
 }
 
 void RGBToYMatrixRow_LSX(const uint8_t* src_rgba,
@@ -2688,7 +2696,9 @@ void RGBToYMatrixRow_LSX(const uint8_t* src_rgba,
         "+&r"(width)      // %2
       : "r"(c),           // %3
         "r"(shuff)        // %4
-      : "memory");
+      : "memory", "$vr0", "$vr1", "$vr2", "$vr3", "$vr4", "$vr5", "$vr6",
+        "$vr7", "$vr8", "$vr9", "$vr10", "$vr12", "$vr13", "$vr14", "$vr15",
+        "$vr16", "$vr17");
 }
 
 // undef for unified sources build
